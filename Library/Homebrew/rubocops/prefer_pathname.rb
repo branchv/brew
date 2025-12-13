@@ -26,6 +26,8 @@ module RuboCop
       #   File.binwrite(prefix.join('data'), content)
       #   Dir.glob(prefix.join('**', '*.rb'))
       #   Dir[libexec.join('**', '*.sh')]
+      #   Dir["#{prefix}/bin/*"]
+      #   Dir[buildpath/"share/**/*.txt"]
       #
       #   # good
       #   prefix.join('bin', 'foo').open
@@ -36,6 +38,8 @@ module RuboCop
       #   prefix.join('data').binwrite(content)
       #   prefix.glob('**/*.rb')
       #   libexec.glob('**/*.sh')
+      #   prefix.glob('bin/*')
+      #   buildpath.glob('share/**/*.txt')
       #
       class PreferPathname < Base
         extend AutoCorrector
@@ -195,9 +199,62 @@ module RuboCop
               corrector.replace(node, replacement)
             end
           end
+
+          # Check for Dir glob with interpolated pathname
+          if dir_glob?(node) && node.first_argument&.dstr_type?
+            check_interpolated_glob(node)
+            return
+          end
+
+          # Check for Dir glob with pathname / operator (e.g., Dir[buildpath/"bin/*"])
+          return unless dir_glob?(node) && node.first_argument
+
+          check_pathname_slash_glob(node)
         end
 
         private
+
+        sig { params(node: RuboCop::AST::SendNode).void }
+        def check_pathname_slash_glob(node)
+          arg = node.first_argument
+          return unless arg.send_type? && arg.method?(:/)
+
+          # Check if left side is a pathname method (e.g., buildpath)
+          return unless formula_pathname_method?(arg.receiver)
+
+          # Right side should be a string with the glob pattern
+          return unless arg.first_argument&.str_type?
+
+          pathname_name = arg.receiver.method_name
+          glob_pattern = arg.first_argument.source
+
+          replacement = "#{pathname_name}.glob(#{glob_pattern})"
+          message = format(MSG, pathname_receiver: pathname_name, replacement: replacement)
+
+          add_offense(node, message: message) do |corrector|
+            corrector.replace(node, replacement)
+          end
+        end
+
+        sig { params(node: RuboCop::AST::SendNode).void }
+        def check_interpolated_glob(node)
+          string_node = node.first_argument
+          return unless string_node.children.first&.begin_type?
+
+          interpolated_var = string_node.children.first.children.first
+          return unless formula_pathname_method?(interpolated_var)
+
+          pathname_name = interpolated_var.method_name
+          glob_pattern = extract_glob_pattern(string_node)
+          return unless glob_pattern
+
+          replacement = "#{pathname_name}.glob(#{glob_pattern})"
+          message = format(MSG, pathname_receiver: pathname_name, replacement: replacement)
+
+          add_offense(node, message: message) do |corrector|
+            corrector.replace(node, replacement)
+          end
+        end
 
         sig { params(node: RuboCop::AST::SendNode).void }
         def evidence(node)
@@ -254,6 +311,32 @@ module RuboCop
           quote = '"'
 
           "#{quote}#{joined_arguments}#{quote}"
+        end
+
+        sig { params(string_node: T.untyped).returns(T.nilable(String)) }
+        def extract_glob_pattern(string_node)
+          # Extract the glob pattern from a string like "#{libexec}/bin/*"
+          # Pattern: (dstr (begin (send nil? :libexec)) (str "/bin/*"))
+          parts = []
+          string_node.children.each_with_index do |child, index|
+            next if index.zero? && child.begin_type? # Skip the interpolated variable at the start
+
+            if child.str_type?
+              # Remove leading slash if it's right after the interpolated variable
+              str_value = child.value
+              str_value = str_value.delete_prefix("/") if index == 1 && str_value.start_with?("/")
+              parts << str_value
+            elsif child.begin_type?
+              # Handle additional interpolations
+              parts << "\#{#{child.children.first.source}}"
+            end
+          end
+
+          return if parts.empty?
+
+          pattern = parts.join
+          # Use double quotes since we converted from an interpolated string
+          "\"#{pattern}\""
         end
       end
     end

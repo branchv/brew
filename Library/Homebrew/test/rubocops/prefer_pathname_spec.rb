@@ -49,23 +49,15 @@ RSpec.describe RuboCop::Cop::Homebrew::PreferPathname, :config do
   end
   # rubocop:enable Style/FormatStringToken
 
-  context "when using `Dir.glob` on Ruby 2.4 or lower", :ruby24, unsupported_on: :prism do
-    it "does not registers an offense" do
-      expect_no_offenses(<<~RUBY)
-        Dir.glob(prefix.join('**/*.rb'))
-      RUBY
-    end
-  end
-
-  context "when using `Dir.glob` on Ruby 2.5 or higher", :ruby25 do
-    it "registers an offense when using `Dir.glob(prefix.join('**/*.rb'))`" do
+  context "when using `Dir.glob`" do
+    it "registers an offense when using `Dir.glob(prefix.join(\"**/*.rb\"))`" do
       expect_offense(<<~RUBY)
-        Dir.glob(prefix.join('**/*.rb'))
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `prefix` is a `Pathname`, so you can use `prefix.glob('**/*.rb')`.
+        Dir.glob(prefix.join("**/*.rb"))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `prefix` is a `Pathname`, so you can use `prefix.glob("**/*.rb")`.
       RUBY
 
       expect_correction(<<~RUBY)
-        prefix.glob('**/*.rb')
+        prefix.glob("**/*.rb")
       RUBY
     end
 
@@ -91,14 +83,14 @@ RSpec.describe RuboCop::Cop::Homebrew::PreferPathname, :config do
       RUBY
     end
 
-    it "registers an offense when using `Dir.glob(libexec.join('**', '*.rb'))`" do
+    it "registers an offense when using `Dir.glob(libexec.join(\"**\", \"*.rb\"))`" do
       expect_offense(<<~RUBY)
-        Dir.glob(libexec.join('**', '*.rb'))
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `libexec` is a `Pathname`, so you can use `libexec.glob('**/*.rb')`.
+        Dir.glob(libexec.join("**", "*.rb"))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `libexec` is a `Pathname`, so you can use `libexec.glob("**/*.rb")`.
       RUBY
 
       expect_correction(<<~RUBY)
-        libexec.glob('**/*.rb')
+        libexec.glob("**/*.rb")
       RUBY
     end
 
@@ -155,6 +147,61 @@ RSpec.describe RuboCop::Cop::Homebrew::PreferPathname, :config do
 
       expect_correction(<<~RUBY)
         libexec.glob('spec/support/**/*.rb')
+      RUBY
+    end
+
+    it "registers offense when using `Dir[\"#\{libexec}/bin/*\"]`" do
+      expect_offense(<<~'RUBY')
+        Dir["#{libexec}/bin/*"]
+        ^^^^^^^^^^^^^^^^^^^^^^^ `libexec` is a `Pathname`, so you can use `libexec.glob("bin/*")`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        libexec.glob("bin/*")
+      RUBY
+    end
+
+    it "registers offense when using `Dir[\"#\{prefix}/share/**/*.txt\"]`" do
+      expect_offense(<<~'RUBY')
+        Dir["#{prefix}/share/**/*.txt"]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `prefix` is a `Pathname`, so you can use `prefix.glob("share/**/*.txt")`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        prefix.glob("share/**/*.txt")
+      RUBY
+    end
+
+    it "registers offense when using `Dir[buildpath/\"bin/*\"]`" do
+      expect_offense(<<~RUBY)
+        Dir[buildpath/"bin/*"]
+        ^^^^^^^^^^^^^^^^^^^^^^ `buildpath` is a `Pathname`, so you can use `buildpath.glob("bin/*")`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        buildpath.glob("bin/*")
+      RUBY
+    end
+
+    it "registers offense when using `Dir[prefix/\"share/**/*.txt\"]`" do
+      expect_offense(<<~RUBY)
+        Dir[prefix/"share/**/*.txt"]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `prefix` is a `Pathname`, so you can use `prefix.glob("share/**/*.txt")`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        prefix.glob("share/**/*.txt")
+      RUBY
+    end
+
+    it "registers offense when using `Dir[libexec/\"tools/*\"]`" do
+      expect_offense(<<~RUBY)
+        Dir[libexec/"tools/*"]
+        ^^^^^^^^^^^^^^^^^^^^^^ `libexec` is a `Pathname`, so you can use `libexec.glob("tools/*")`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        libexec.glob("tools/*")
       RUBY
     end
   end
