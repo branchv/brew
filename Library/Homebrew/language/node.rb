@@ -14,6 +14,7 @@ module Language
 
     sig { returns(String) }
     def self.npm_cache_config
+      # odeprecated "Language::Node.npm_cache_config"
       "cache=#{HOMEBREW_CACHE}/npm_cache"
     end
 
@@ -21,7 +22,6 @@ module Language
     def self.npm_install_security_args(ignore_scripts: true)
       args = %W[
         --min-release-age=#{Homebrew::RELEASE_COOLDOWN_DAYS}
-        --#{npm_cache_config}
       ]
 
       args << "--ignore-scripts" if ignore_scripts
@@ -85,7 +85,6 @@ module Language
       args = %w[
         --loglevel=silly
         --global
-        --build-from-source
       ] + npm_install_security_args(ignore_scripts:) + %W[
         --prefix=#{libexec}
         #{Dir.pwd}/#{pack}
@@ -104,7 +103,6 @@ module Language
       # install a freshly compromised npm release or dependency.
       %w[
         --loglevel=silly
-        --build-from-source
       ] + npm_install_security_args(ignore_scripts:)
     end
 

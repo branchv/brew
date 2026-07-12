@@ -3713,20 +3713,25 @@ class Formula
   sig { params(home: Pathname).returns(T::Hash[Symbol, String]) }
   def common_sandbox_env(home)
     {
-      _JAVA_OPTIONS:           "-Duser.home=#{HOMEBREW_CACHE}/java_cache",
-      GOCACHE:                 "#{HOMEBREW_CACHE}/go_cache",
-      GIT_CONFIG_GLOBAL:       Utils::Git.no_global_config_file,
-      GIT_TERMINAL_PROMPT:     "0",
-      GOENV:                   "off",
-      GOPATH:                  "#{HOMEBREW_CACHE}/go_mod_cache",
-      CARGO_HOME:              "#{HOMEBREW_CACHE}/cargo_cache",
-      BUNDLE_COOLDOWN:         Homebrew::RELEASE_COOLDOWN_DAYS.to_s,
-      PIP_CACHE_DIR:           "#{HOMEBREW_CACHE}/pip_cache",
-      PIP_CONFIG_FILE:         File::NULL,
-      NPM_CONFIG_USERCONFIG:   File::NULL,
-      CURL_HOME:               ENV.fetch("CURL_HOME") { home.to_s },
-      PYTHONDONTWRITEBYTECODE: "1",
-      XDG_CONFIG_HOME:         "#{home}/.config",
+      _JAVA_OPTIONS:                "-Duser.home=#{HOMEBREW_CACHE}/java_cache",
+      GOCACHE:                      "#{HOMEBREW_CACHE}/go_cache",
+      GIT_CONFIG_GLOBAL:            Utils::Git.no_global_config_file,
+      GIT_TERMINAL_PROMPT:          "0",
+      GOENV:                        "off",
+      GOPATH:                       "#{HOMEBREW_CACHE}/go_mod_cache",
+      CARGO_HOME:                   "#{HOMEBREW_CACHE}/cargo_cache",
+      BUNDLE_COOLDOWN:              Homebrew::RELEASE_COOLDOWN_DAYS.to_s,
+      PIP_CACHE_DIR:                "#{HOMEBREW_CACHE}/pip_cache",
+      PIP_CONFIG_FILE:              File::NULL,
+      # This is an unofficial setting that some build tools respect to build from source.
+      # https://github.com/mapbox/node-pre-gyp/blob/14fe6fdcf51861e4bc8b7333765b27a23ccc9ae5/lib/node-pre-gyp.js#L172-L197
+      # https://github.com/prebuild/node-gyp-build/blob/6822ec52423a2b3ed48ef8960a9fe05902e9e1a3/bin.js#L67
+      npm_config_build_from_source: "true",
+      npm_config_cache:             "#{HOMEBREW_CACHE}/npm_cache",
+      NPM_CONFIG_USERCONFIG:        File::NULL,
+      CURL_HOME:                    ENV.fetch("CURL_HOME") { home.to_s },
+      PYTHONDONTWRITEBYTECODE:      "1",
+      XDG_CONFIG_HOME:              "#{home}/.config",
     }
   end
 

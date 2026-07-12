@@ -105,7 +105,3 @@ class Foo < Formula
   end
 end
 ```
-
-## Tooling
-
-You can use [homebrew-npm-noob](https://github.com/zmwangx/homebrew-npm-noob) to automatically generate a formula like the example above for an npm package.
